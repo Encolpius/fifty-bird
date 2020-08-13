@@ -34,10 +34,15 @@ local GROUND_SCROLL_SPEED = 60
 local BACKGROUND_LOOPING_POINT = 413
 local GROUND_LOOPING_POINT = 514
 
+local PAUSED = false
+
 local scrolling = true
 
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
+
+    math.randomseed(os.time())
+
     love.window.setTitle('Fifty Bird')
 
     smallFont = love.graphics.newFont('font.ttf', 8)
@@ -45,6 +50,18 @@ function love.load()
     flappyFont = love.graphics.newFont('flappy.ttf', 28)
     hugeFont = love.graphics.newFont('flappy.ttf', 56)
     love.graphics.setFont(flappyFont)
+
+    sounds = {
+        ['jump'] = love.audio.newSource('jump.wav', 'static'),
+        ['explosion'] = love.audio.newSource('explosion.wav', 'static'),
+        ['hurt'] = love.audio.newSource('hurt.wav', 'static'),
+        ['score'] = love.audio.newSource('score.wav', 'static'),
+        ['pause'] = love.audio.newSource('pause.wav', 'static'),
+        ['music'] = love.audio.newSource('marios_way.mp3', 'static'),
+    }
+
+    sounds['music']:setLooping(true)
+    sounds['music']:play()
 
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {
         vsync = true,
@@ -61,6 +78,7 @@ function love.load()
     gStateMachine:change('title')
 
     love.keyboard.keysPressed = {}
+    love.mouse.buttonsPressed = {}
 end
 
 function love.resize(w, h)
@@ -72,6 +90,23 @@ function love.keypressed(key)
     if key == 'escape' then 
         love.event.quit()
     end
+
+    if key == 'p' and gStateMachine:getCurrent() == 'play' then 
+        if PAUSED == false then 
+            PAUSED = true
+            scrolling = false
+            sounds['pause']:play()
+            sounds['music']:pause()
+        else 
+            PAUSED = false
+            scrolling = true
+            sounds['music']:play()
+        end
+    end
+end
+
+function love.mousepressed(x, y, button)
+    love.mouse.buttonsPressed[button] = true
 end
 
 function love.keyboard.wasPressed(key)
@@ -82,23 +117,32 @@ function love.keyboard.wasPressed(key)
     end
 end
 
-function love.update(dt)
-    backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
-    groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % GROUND_LOOPING_POINT
+function love.mouse.wasPressed(button) 
+    return love.mouse.buttonsPressed[button]
+end
 
-    gStateMachine:update(dt)
+function love.update(dt)
+    if scrolling then 
+        backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
+        groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % GROUND_LOOPING_POINT
+        gStateMachine:update(dt)
+    end
 
     love.keyboard.keysPressed = {}
+    love.mouse.buttonsPressed = {}
 end
 
 function love.draw()
+
     push:start()
 
     love.graphics.draw(background, -backgroundScroll, 0)
-
     gStateMachine:render()
-
     love.graphics.draw(ground, -groundScroll, VIRTUAL_HEIGHT - 16)
+
+    if PAUSED then 
+        love.graphics.printf('Paused', 0, VIRTUAL_HEIGHT / 2, VIRTUAL_WIDTH, 'center')
+    end
 
     push:finish()
 end

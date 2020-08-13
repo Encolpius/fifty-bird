@@ -34,6 +34,8 @@
 --
 StateMachine = Class{}
 
+currentState = 'title'
+
 function StateMachine:init(states)
 	self.empty = {
 		render = function() end,
@@ -50,6 +52,7 @@ function StateMachine:change(stateName, enterParams)
 	self.current:exit()
 	self.current = self.states[stateName]()
 	self.current:enter(enterParams)
+	currentState = stateName
 end
 
 function StateMachine:update(dt)
@@ -58,4 +61,8 @@ end
 
 function StateMachine:render()
 	self.current:render()
+end
+
+function StateMachine:getCurrent()
+	return currentState
 end
